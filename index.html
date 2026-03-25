@@ -94,37 +94,77 @@
   }
   .divider:hover, .divider.dragging { background: var(--accent); }
 
-  .editor-wrap { flex: 1; position: relative; overflow: hidden; display: flex; }
+  /* ── Editor ── */
+  .editor-wrap {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
 
   .line-numbers {
-    padding: 14px 0; width: 44px; text-align: right;
-    font-family: var(--mono); font-size: 12px; line-height: 20px;
-    color: var(--text-dim); background: var(--surface);
-    user-select: none; overflow: hidden; flex-shrink: 0;
+    padding: 14px 0;
+    width: 44px;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-dim);
+    background: var(--surface);
+    user-select: none;
+    overflow: hidden;
+    flex-shrink: 0;
     border-right: 1px solid var(--border);
   }
   .line-numbers span { display: block; padding-right: 10px; }
 
-  .editor-container { flex: 1; position: relative; overflow: hidden; }
-
-  #editor, .highlight-layer {
-    font-family: var(--mono); font-size: 13px; line-height: 20px;
-    padding: 14px; white-space: pre-wrap; word-wrap: break-word; tab-size: 2;
+  .editor-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
   }
 
-  .highlight-layer {
-    position: absolute; top: 0; left: 0;
-    width: 100%; min-height: 100%;
-    pointer-events: none; color: transparent; overflow: hidden;
+  /* Backdrop: highlighted code rendered behind the textarea */
+  #backdrop {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
   }
 
+  #highlightLayer {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 20px;
+    padding: 14px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    tab-size: 2;
+    color: var(--text);
+  }
+
+  /* Textarea: sits on top, fully transparent text so highlight shows through */
   #editor {
-    position: relative; z-index: 1;
-    width: 100%; height: 100%;
-    border: none; outline: none; resize: none;
-    background: transparent; color: transparent;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 20px;
+    padding: 14px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    tab-size: 2;
+    border: none;
+    outline: none;
+    resize: none;
+    background: transparent;
+    color: rgba(201, 209, 217, 0.0);
     caret-color: var(--accent);
     overflow: auto;
+    z-index: 1;
+    -webkit-text-fill-color: transparent;
   }
 
   .hl-tag { color: var(--red); }
@@ -135,9 +175,11 @@
   .hl-entity { color: var(--cyan); }
   .hl-text { color: var(--text); }
 
+  /* ── Preview ── */
   .preview-wrap { flex: 1; background: #fff; overflow: auto; }
   .preview-wrap iframe { width: 100%; height: 100%; border: none; }
 
+  /* ── Floating Format Button ── */
   .fab {
     position: fixed; bottom: 14px; right: 14px; z-index: 100;
     font-family: var(--mono); font-size: 10px; font-weight: 500;
@@ -177,8 +219,8 @@
     <div class="pane-label">HTML</div>
     <div class="editor-wrap">
       <div class="line-numbers" id="lineNumbers"></div>
-      <div class="editor-container" id="editorContainer">
-        <div class="highlight-layer" id="highlightLayer"></div>
+      <div class="editor-container">
+        <div id="backdrop"><div id="highlightLayer"></div></div>
         <textarea id="editor" spellcheck="false" aria-label="HTML code editor for the HTML renderer"></textarea>
       </div>
     </div>
@@ -200,10 +242,11 @@
 <script>
 const editor = document.getElementById('editor');
 const preview = document.getElementById('preview');
+const backdrop = document.getElementById('backdrop');
 const highlightLayer = document.getElementById('highlightLayer');
 const lineNumbers = document.getElementById('lineNumbers');
-const editorContainer = document.getElementById('editorContainer');
-let debounceTimer;
+
+let previewTimer, highlightTimer;
 
 const sampleHTML = `<!DOCTYPE html>
 <html lang="en">
@@ -237,86 +280,141 @@ const sampleHTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// ── Scroll sync: textarea drives backdrop + line numbers ──
+editor.addEventListener('scroll', syncScroll);
+function syncScroll() {
+  backdrop.scrollTop = editor.scrollTop;
+  backdrop.scrollLeft = editor.scrollLeft;
+  lineNumbers.scrollTop = editor.scrollTop;
+}
+
+// ── Syntax Highlighting ──
 function highlightHTML(code) {
   let result = '', i = 0;
   const len = code.length;
   while (i < len) {
     if (code.startsWith('<!--', i)) {
-      const end = code.indexOf('-->', i); const close = end === -1 ? len : end + 3;
-      result += `<span class="hl-comment">${esc(code.slice(i, close))}</span>`; i = close;
+      const end = code.indexOf('-->', i);
+      const close = end === -1 ? len : end + 3;
+      result += '<span class="hl-comment">' + esc(code.slice(i, close)) + '</span>';
+      i = close;
     } else if (code.startsWith('<!', i) && !code.startsWith('<!--', i)) {
-      const close = code.indexOf('>', i); const end = close === -1 ? len : close + 1;
-      result += `<span class="hl-doctype">${esc(code.slice(i, end))}</span>`; i = end;
-    } else if (code[i] === '<' && (code[i+1] === '/' || /[a-zA-Z]/.test(code[i+1]||''))) {
-      let j = i + 1; if (code[j] === '/') j++;
+      const close = code.indexOf('>', i);
+      const end = close === -1 ? len : close + 1;
+      result += '<span class="hl-doctype">' + esc(code.slice(i, end)) + '</span>';
+      i = end;
+    } else if (code[i] === '<' && i + 1 < len && (code[i+1] === '/' || /[a-zA-Z]/.test(code[i+1]))) {
+      let j = i + 1;
+      if (code[j] === '/') j++;
       while (j < len && /[a-zA-Z0-9\-]/.test(code[j])) j++;
-      let s = `<span class="hl-tag">${esc(code.slice(i, j))}</span>`;
+      let s = '<span class="hl-tag">' + esc(code.slice(i, j)) + '</span>';
       while (j < len && code[j] !== '>') {
-        if (code[j] === '/' && code[j+1] === '>') { s += `<span class="hl-tag">/&gt;</span>`; j += 2; break; }
-        if (/\s/.test(code[j])) { s += esc(code[j]); j++; continue; }
-        let a = j; while (j < len && /[a-zA-Z0-9\-_:@.]/.test(code[j])) j++;
-        if (j > a) s += `<span class="hl-attr">${esc(code.slice(a, j))}</span>`;
-        if (code[j] === '=') {
-          s += '='; j++;
-          if (code[j] === '"' || code[j] === "'") {
-            const q = code[j]; let v = code.indexOf(q, j+1); if (v === -1) v = len - 1;
-            s += `<span class="hl-str">${esc(code.slice(j, v+1))}</span>`; j = v + 1;
-          } else { let v = j; while (v < len && !/[\s>]/.test(code[v])) v++; s += `<span class="hl-str">${esc(code.slice(j, v))}</span>`; j = v; }
+        if (code[j] === '/' && j + 1 < len && code[j+1] === '>') {
+          s += '<span class="hl-tag">/&gt;</span>';
+          j += 2;
+          break;
         }
-        if (j < len && code[j] === '>') { s += `<span class="hl-tag">&gt;</span>`; j++; break; }
+        if (/\s/.test(code[j])) { s += esc(code[j]); j++; continue; }
+        let a = j;
+        while (j < len && /[a-zA-Z0-9\-_:@.]/.test(code[j])) j++;
+        if (j > a) s += '<span class="hl-attr">' + esc(code.slice(a, j)) + '</span>';
+        if (j < len && code[j] === '=') {
+          s += '=';
+          j++;
+          if (j < len && (code[j] === '"' || code[j] === "'")) {
+            const q = code[j];
+            let v = code.indexOf(q, j + 1);
+            if (v === -1) v = len - 1;
+            s += '<span class="hl-str">' + esc(code.slice(j, v + 1)) + '</span>';
+            j = v + 1;
+          } else {
+            let v = j;
+            while (v < len && !/[\s>]/.test(code[v])) v++;
+            s += '<span class="hl-str">' + esc(code.slice(j, v)) + '</span>';
+            j = v;
+          }
+        }
+        if (j < len && code[j] === '>') {
+          s += '<span class="hl-tag">&gt;</span>';
+          j++;
+          break;
+        }
       }
-      if (j <= len && code[j-1] !== '>' && code[j] === '>') { s += `<span class="hl-tag">&gt;</span>`; j++; }
-      result += s; i = j;
+      if (j <= len && code[j - 1] !== '>' && j < len && code[j] === '>') {
+        s += '<span class="hl-tag">&gt;</span>';
+        j++;
+      }
+      result += s;
+      i = j;
     } else if (code[i] === '&') {
       const semi = code.indexOf(';', i);
-      if (semi !== -1 && semi - i < 12) { result += `<span class="hl-entity">${esc(code.slice(i, semi+1))}</span>`; i = semi + 1; }
-      else { result += esc(code[i]); i++; }
+      if (semi !== -1 && semi - i < 12) {
+        result += '<span class="hl-entity">' + esc(code.slice(i, semi + 1)) + '</span>';
+        i = semi + 1;
+      } else {
+        result += esc(code[i]);
+        i++;
+      }
     } else {
-      let j = i; while (j < len && code[j] !== '<' && code[j] !== '&') j++;
-      result += `<span class="hl-text">${esc(code.slice(i, j))}</span>`; i = j;
+      let j = i;
+      while (j < len && code[j] !== '<' && code[j] !== '&') j++;
+      result += '<span class="hl-text">' + esc(code.slice(i, j)) + '</span>';
+      i = j;
     }
   }
   return result;
 }
 
-function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
+// ── Line Numbers ──
 function updateLineNumbers() {
   const n = editor.value.split('\n').length;
-  let h = ''; for (let i = 1; i <= n; i++) h += `<span>${i}</span>`;
+  let h = '';
+  for (let i = 1; i <= n; i++) h += '<span>' + i + '</span>';
   lineNumbers.innerHTML = h;
 }
 
-editor.addEventListener('scroll', () => {
-  highlightLayer.style.transform = `translate(-${editor.scrollLeft}px, -${editor.scrollTop}px)`;
-  lineNumbers.scrollTop = editor.scrollTop;
-});
-
+// ── Main update — debounced separately for highlight vs preview ──
 function update() {
-  const code = editor.value;
-  highlightLayer.innerHTML = highlightHTML(code) + '\n';
   updateLineNumbers();
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    const doc = preview.contentDocument; doc.open(); doc.write(code); doc.close();
-  }, 200);
+
+  // Debounce syntax highlighting (30ms — fast enough to feel instant)
+  clearTimeout(highlightTimer);
+  highlightTimer = setTimeout(() => {
+    highlightLayer.innerHTML = highlightHTML(editor.value) + '\n';
+    syncScroll();
+  }, 30);
+
+  // Debounce preview render (300ms — heavier operation)
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(() => {
+    const doc = preview.contentDocument;
+    doc.open();
+    doc.write(editor.value);
+    doc.close();
+  }, 300);
 }
 
+// ── Tab support ──
 editor.addEventListener('keydown', (e) => {
   if (e.key === 'Tab') {
     e.preventDefault();
-    const s = editor.selectionStart, end = editor.selectionEnd;
+    const s = editor.selectionStart;
+    const end = editor.selectionEnd;
     editor.value = editor.value.substring(0, s) + '  ' + editor.value.substring(end);
     editor.selectionStart = editor.selectionEnd = s + 2;
     update();
   }
 });
+
 editor.addEventListener('input', update);
 
+// ── Format ──
 function formatCode() {
   const raw = editor.value;
-
-  // Tokenize into tags and text segments
   const tokens = [];
   const re = /<!--[\s\S]*?-->|<!\w[^>]*>|<\/?\w[^>]*\/?>|[^<]+/g;
   let m;
@@ -325,25 +423,19 @@ function formatCode() {
   const voidTags = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
   const rawTags = new Set(['style','script','pre','code','textarea']);
 
-  let indent = 0;
-  let lines = [];
-  let inRaw = false;
-  let rawTag = '';
+  let indent = 0, lines = [], inRaw = false, rawTag = '';
 
   for (const token of tokens) {
     const trimmed = token.trim();
     if (!trimmed) continue;
 
-    // Check if we're exiting a raw block
     if (inRaw) {
-      // Preserve content inside raw blocks as-is
-      const closeRe = new RegExp(`^</${rawTag}\\s*>`, 'i');
+      const closeRe = new RegExp('^</' + rawTag + '\\s*>', 'i');
       if (closeRe.test(trimmed)) {
         inRaw = false;
         indent = Math.max(0, indent - 1);
         lines.push('  '.repeat(indent) + trimmed);
       } else {
-        // Preserve raw content with current indent
         const rawLines = trimmed.split('\n');
         for (const rl of rawLines) {
           lines.push('  '.repeat(indent) + rl.trimStart());
@@ -369,14 +461,10 @@ function formatCode() {
     } else if (isOpening) {
       lines.push('  '.repeat(indent) + trimmed);
       if (!isVoid && !isSelfClose) {
-        if (rawTags.has(tagName)) {
-          inRaw = true;
-          rawTag = tagName;
-        }
+        if (rawTags.has(tagName)) { inRaw = true; rawTag = tagName; }
         indent++;
       }
     } else {
-      // Text node — may contain multiple lines
       const textLines = trimmed.split('\n');
       for (const tl of textLines) {
         const t = tl.trim();
@@ -389,29 +477,40 @@ function formatCode() {
   update();
 }
 
+// ── Resizable divider ──
 const divider = document.getElementById('divider');
 const editorPane = document.getElementById('editorPane');
 const previewPane = document.getElementById('previewPane');
 let isDragging = false;
+
 divider.addEventListener('mousedown', () => {
-  isDragging = true; divider.classList.add('dragging');
-  document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none';
+  isDragging = true;
+  divider.classList.add('dragging');
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
   preview.style.pointerEvents = 'none';
 });
+
 document.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
   const rect = document.querySelector('.workspace').getBoundingClientRect();
   const pct = Math.max(20, Math.min(80, ((e.clientX - rect.left) / rect.width) * 100));
-  editorPane.style.flex = 'none'; editorPane.style.width = pct + '%'; previewPane.style.flex = '1';
+  editorPane.style.flex = 'none';
+  editorPane.style.width = pct + '%';
+  previewPane.style.flex = '1';
 });
+
 document.addEventListener('mouseup', () => {
   if (isDragging) {
-    isDragging = false; divider.classList.remove('dragging');
-    document.body.style.cursor = ''; document.body.style.userSelect = '';
+    isDragging = false;
+    divider.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
     preview.style.pointerEvents = '';
   }
 });
 
+// ── Init ──
 editor.value = sampleHTML;
 update();
 </script>
