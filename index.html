@@ -293,6 +293,7 @@ function highlightHTML(code) {
   let result = '', i = 0;
   const len = code.length;
   while (i < len) {
+    const prevI = i;
     if (code.startsWith('<!--', i)) {
       const end = code.indexOf('-->', i);
       const close = end === -1 ? len : end + 3;
@@ -317,7 +318,13 @@ function highlightHTML(code) {
         if (/\s/.test(code[j])) { s += esc(code[j]); j++; continue; }
         let a = j;
         while (j < len && /[a-zA-Z0-9\-_:@.]/.test(code[j])) j++;
-        if (j > a) s += '<span class="hl-attr">' + esc(code.slice(a, j)) + '</span>';
+        if (j === a) {
+          // Unknown char inside tag — emit it and move on to prevent infinite loop
+          s += esc(code[j]);
+          j++;
+          continue;
+        }
+        s += '<span class="hl-attr">' + esc(code.slice(a, j)) + '</span>';
         if (j < len && code[j] === '=') {
           s += '=';
           j++;
@@ -360,6 +367,11 @@ function highlightHTML(code) {
       while (j < len && code[j] !== '<' && code[j] !== '&') j++;
       result += '<span class="hl-text">' + esc(code.slice(i, j)) + '</span>';
       i = j;
+    }
+    // Safety: guarantee forward progress
+    if (i === prevI) {
+      result += esc(code[i]);
+      i++;
     }
   }
   return result;
