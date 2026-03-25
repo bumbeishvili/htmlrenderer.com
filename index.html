@@ -11,18 +11,17 @@
   gtag('js', new Date());
   gtag('config', 'G-D8VTS7PQTD');
 </script>
-<title>HTML Renderer & Formatter — Render and Format HTML Online</title>
+<title>HTML Renderer &amp; Formatter — Render and Format HTML Online</title>
 <meta name="description" content="Free online HTML renderer and HTML formatter. Paste your HTML code, render it instantly, and format HTML with one click. The simplest way to render and format HTML in your browser.">
 <meta name="keywords" content="html renderer, render html, html render, html render online, html renderer online, html editor, render html online, html online, html formatter, format html, html format, format html online, html formatter online, html beautifier, beautify html, html pretty print, html indent, html code formatter">
 <link rel="canonical" href="https://htmlrenderer.com/">
-<meta property="og:title" content="HTML Renderer & Formatter — Render and Format HTML Online">
+<meta property="og:title" content="HTML Renderer &amp; Formatter — Render and Format HTML Online">
 <meta property="og:description" content="Free online HTML renderer and formatter with syntax highlighting. Paste HTML, render and format it instantly.">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="HTML Renderer & Formatter — Format and Render HTML Online">
+<meta name="twitter:title" content="HTML Renderer &amp; Formatter — Format and Render HTML Online">
 <meta name="twitter:description" content="The simplest online HTML renderer and formatter. Paste code, render and format HTML instantly.">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@500;600&display=swap" rel="stylesheet">
-
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -35,183 +34,143 @@
   "browserRequirements": "Requires a modern web browser"
 }
 </script>
-
 <style>
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #0e1117;
+  --surface: #161b22;
+  --border: #2a303a;
+  --text: #c9d1d9;
+  --text-dim: #6e7681;
+  --accent: #58a6ff;
+  --green: #7ee787;
+  --orange: #ffa657;
+  --purple: #d2a8ff;
+  --red: #ff7b72;
+  --cyan: #79c0ff;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --font-size: 13px;
+  --line-height: 20px;
+  --pad: 14px;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+.workspace { display: flex; flex: 1; overflow: hidden; }
+.pane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.pane-label {
+  padding: 7px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--text-dim); flex-shrink: 0;
+}
+.divider {
+  width: 1px; background: var(--border);
+  cursor: col-resize; flex-shrink: 0;
+  transition: background 0.15s;
+}
+.divider:hover, .divider.dragging { background: var(--accent); }
 
-  :root {
-    --bg: #0e1117;
-    --surface: #161b22;
-    --border: #2a303a;
-    --text: #c9d1d9;
-    --text-dim: #6e7681;
-    --accent: #58a6ff;
-    --green: #7ee787;
-    --orange: #ffa657;
-    --purple: #d2a8ff;
-    --red: #ff7b72;
-    --cyan: #79c0ff;
-    --mono: 'IBM Plex Mono', monospace;
-    --sans: 'DM Sans', sans-serif;
-  }
+/* ── Editor area ── */
+.editor-wrap { flex: 1; display: flex; overflow: hidden; }
+.line-numbers {
+  padding: var(--pad) 0; width: 44px; text-align: right;
+  font-family: var(--mono); font-size: var(--font-size); line-height: var(--line-height);
+  color: var(--text-dim); background: var(--surface);
+  user-select: none; overflow: hidden; flex-shrink: 0;
+  border-right: 1px solid var(--border);
+}
+.line-numbers span { display: block; padding-right: 10px; }
+.editor-container { flex: 1; position: relative; overflow: hidden; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    height: 100vh;
-    display: flex;
-    overflow: hidden;
-  }
+/*
+  The key trick: #highlight is a <pre> that sits behind the <textarea>.
+  Both have identical font/size/padding/wrapping so text aligns perfectly.
+  The textarea has transparent text; the pre shows the colored version.
+  Scrolling is synced via JS polling (not events on the textarea).
+*/
+#highlight, #editor {
+  font-family: var(--mono);
+  font-size: var(--font-size);
+  line-height: var(--line-height);
+  padding: var(--pad);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  tab-size: 2;
+  -moz-tab-size: 2;
+  margin: 0;
+  border: 0;
+}
+#highlight {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  color: var(--text);
+}
+#editor {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  resize: none; outline: none;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--accent);
+  -webkit-text-fill-color: transparent;
+  overflow: auto;
+  z-index: 1;
+}
 
-  .workspace { display: flex; flex: 1; overflow: hidden; }
+/* Syntax spans */
+.hl-tag { color: var(--red); }
+.hl-attr { color: var(--orange); }
+.hl-str { color: var(--green); }
+.hl-comment { color: var(--text-dim); font-style: italic; }
+.hl-doctype { color: var(--purple); }
+.hl-entity { color: var(--cyan); }
 
-  .pane {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
+/* ── Preview ── */
+.preview-wrap { flex: 1; background: #fff; overflow: auto; }
+.preview-wrap iframe { width: 100%; height: 100%; border: none; }
 
-  .pane-label {
-    padding: 7px 14px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--text-dim);
-    flex-shrink: 0;
-  }
+/* ── FAB ── */
+.fab {
+  position: fixed; bottom: 14px; right: 14px; z-index: 100;
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  padding: 5px 10px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-dim); cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3); opacity: 0.7;
+}
+.fab:hover { border-color: var(--accent); color: var(--text); opacity: 1; }
+.fab svg { width: 11px; height: 11px; }
 
-  .divider {
-    width: 1px;
-    background: var(--border);
-    cursor: col-resize;
-    flex-shrink: 0;
-    transition: background 0.15s;
-  }
-  .divider:hover, .divider.dragging { background: var(--accent); }
-
-  /* ── Editor ── */
-  .editor-wrap {
-    flex: 1;
-    display: flex;
-    overflow: hidden;
-  }
-
-  .line-numbers {
-    padding: 14px 0;
-    width: 44px;
-    text-align: right;
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 20px;
-    color: var(--text-dim);
-    background: var(--surface);
-    user-select: none;
-    overflow: hidden;
-    flex-shrink: 0;
-    border-right: 1px solid var(--border);
-  }
-  .line-numbers span { display: block; padding-right: 10px; }
-
-  .editor-container {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-  }
-
-  /* Backdrop: highlighted code rendered behind the textarea */
-  #backdrop {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    overflow: hidden;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  #highlightLayer {
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 20px;
-    padding: 14px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    tab-size: 2;
-    color: var(--text);
-  }
-
-  /* Textarea: sits on top, fully transparent text so highlight shows through */
-  #editor {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 20px;
-    padding: 14px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    tab-size: 2;
-    border: none;
-    outline: none;
-    resize: none;
-    background: transparent;
-    color: rgba(201, 209, 217, 0.0);
-    caret-color: var(--accent);
-    overflow: auto;
-    z-index: 1;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .hl-tag { color: var(--red); }
-  .hl-attr { color: var(--orange); }
-  .hl-str { color: var(--green); }
-  .hl-comment { color: var(--text-dim); font-style: italic; }
-  .hl-doctype { color: var(--purple); }
-  .hl-entity { color: var(--cyan); }
-  .hl-text { color: var(--text); }
-
-  /* ── Preview ── */
-  .preview-wrap { flex: 1; background: #fff; overflow: auto; }
-  .preview-wrap iframe { width: 100%; height: 100%; border: none; }
-
-  /* ── Floating Format Button ── */
-  .fab {
-    position: fixed; bottom: 14px; right: 14px; z-index: 100;
-    font-family: var(--mono); font-size: 10px; font-weight: 500;
-    padding: 5px 10px; border-radius: 6px;
-    border: 1px solid var(--border); background: var(--surface);
-    color: var(--text-dim); cursor: pointer; transition: all 0.15s;
-    display: flex; align-items: center; gap: 4px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    opacity: 0.7;
-  }
-  .fab:hover { border-color: var(--accent); color: var(--text); opacity: 1; }
-  .fab svg { width: 11px; height: 11px; }
-
-  @media (max-width: 700px) {
-    .workspace { flex-direction: column; }
-    .divider { width: 100%; height: 1px; cursor: row-resize; }
-  }
-
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-  .seo-only {
-    position: absolute; width: 1px; height: 1px;
-    overflow: hidden; clip: rect(0,0,0,0);
-    white-space: nowrap; border: 0;
-  }
+@media (max-width: 700px) {
+  .workspace { flex-direction: column; }
+  .divider { width: 100%; height: 1px; cursor: row-resize; }
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.seo-only {
+  position: absolute; width: 1px; height: 1px;
+  overflow: hidden; clip: rect(0,0,0,0);
+  white-space: nowrap; border: 0;
+}
 </style>
 </head>
 <body>
 
-<h1 class="seo-only">HTML Renderer & Formatter — Render and Format HTML Online</h1>
+<h1 class="seo-only">HTML Renderer &amp; Formatter — Render and Format HTML Online</h1>
 <p class="seo-only">Use this free HTML renderer and HTML formatter to paste your HTML code, see it rendered instantly, and format HTML with one click. This online HTML renderer includes syntax highlighting, a side-by-side rendered preview, and an HTML beautifier that auto-indents and pretty prints your code. No sign-up required — just paste, render, and format HTML online.</p>
 
 <div class="workspace">
@@ -220,8 +179,8 @@
     <div class="editor-wrap">
       <div class="line-numbers" id="lineNumbers"></div>
       <div class="editor-container">
-        <div id="backdrop"><div id="highlightLayer"></div></div>
-        <textarea id="editor" spellcheck="false" aria-label="HTML code editor for the HTML renderer"></textarea>
+        <pre id="highlight"></pre>
+        <textarea id="editor" spellcheck="false" aria-label="HTML code editor"></textarea>
       </div>
     </div>
   </div>
@@ -240,136 +199,124 @@
 </button>
 
 <script>
-const editor = document.getElementById('editor');
-const preview = document.getElementById('preview');
-const backdrop = document.getElementById('backdrop');
-const highlightLayer = document.getElementById('highlightLayer');
-const lineNumbers = document.getElementById('lineNumbers');
+// ── Core engine: polling-based, like squarefree's editor ──
+// The textarea is the source of truth. A setInterval polls it,
+// and when it changes, we update the highlight <pre> and the preview iframe.
 
-let previewTimer, highlightTimer;
+var editor = document.getElementById('editor');
+var highlight = document.getElementById('highlight');
+var lineNumbers = document.getElementById('lineNumbers');
+var previewFrame = document.getElementById('preview');
+var old = '';
 
-const sampleHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 0 20px;
-      color: #1a1a2e;
-    }
-    h1 { color: #16213e; }
-    .card {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 16px 0;
-      border-left: 4px solid #0f3460;
-    }
-  </style>
-</head>
-<body>
-  <h1>Hello, World!</h1>
-  <p>Start editing to see your changes rendered.</p>
-  <div class="card">
-    <strong>Tip:</strong> The rendered preview
-    updates as you type.
-  </div>
-</body>
-</html>`;
+var defaultHTML = '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <style>\n    body {\n      font-family: system-ui, sans-serif;\n      max-width: 600px;\n      margin: 40px auto;\n      padding: 0 20px;\n      color: #1a1a2e;\n    }\n    h1 { color: #16213e; }\n    .card {\n      background: #f8f9fa;\n      border-radius: 8px;\n      padding: 20px;\n      margin: 16px 0;\n      border-left: 4px solid #0f3460;\n    }\n  </style>\n</head>\n<body>\n  <h1>Hello, World!</h1>\n  <p>Start editing to see your changes rendered.</p>\n  <div class="card">\n    <strong>Tip:</strong> The rendered preview\n    updates as you type.\n  </div>\n</body>\n</html>';
 
-// ── Scroll sync: textarea drives backdrop + line numbers ──
-editor.addEventListener('scroll', syncScroll);
+editor.value = defaultHTML;
+
+// ── Poll loop: check for changes every 150ms ──
+function poll() {
+  var val = editor.value;
+  if (val !== old) {
+    old = val;
+    // Update highlight
+    highlight.innerHTML = syntaxHighlight(val) + '\n';
+    // Update line numbers
+    updateLineNumbers(val);
+    // Update preview
+    try {
+      var doc = previewFrame.contentDocument;
+      doc.open();
+      doc.write(val);
+      doc.close();
+    } catch(e) {}
+  }
+  // Sync scroll every tick regardless of content change
+  syncScroll();
+  window.setTimeout(poll, 150);
+}
+
 function syncScroll() {
-  backdrop.scrollTop = editor.scrollTop;
-  backdrop.scrollLeft = editor.scrollLeft;
+  highlight.style.transform = 'translate(' + (-editor.scrollLeft) + 'px,' + (-editor.scrollTop) + 'px)';
   lineNumbers.scrollTop = editor.scrollTop;
 }
 
-// ── Syntax Highlighting ──
-function highlightHTML(code) {
-  let result = '', i = 0;
-  const len = code.length;
+function updateLineNumbers(val) {
+  var n = val.split('\n').length;
+  var h = '';
+  for (var i = 1; i <= n; i++) h += '<span>' + i + '</span>';
+  lineNumbers.innerHTML = h;
+}
+
+// ── Tab key support ──
+editor.addEventListener('keydown', function(e) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    var s = editor.selectionStart;
+    var end = editor.selectionEnd;
+    editor.value = editor.value.substring(0, s) + '  ' + editor.value.substring(end);
+    editor.selectionStart = editor.selectionEnd = s + 2;
+  }
+});
+
+// ── Syntax highlighter (safe — always advances) ──
+function syntaxHighlight(code) {
+  var result = '';
+  var i = 0;
+  var len = code.length;
+
   while (i < len) {
-    const prevI = i;
-    if (code.startsWith('<!--', i)) {
-      const end = code.indexOf('-->', i);
-      const close = end === -1 ? len : end + 3;
-      result += '<span class="hl-comment">' + esc(code.slice(i, close)) + '</span>';
+    var before = i;
+
+    // Comment
+    if (code.substr(i, 4) === '<!--') {
+      var end = code.indexOf('-->', i + 4);
+      var close = end === -1 ? len : end + 3;
+      result += '<span class="hl-comment">' + esc(code.substring(i, close)) + '</span>';
       i = close;
-    } else if (code.startsWith('<!', i) && !code.startsWith('<!--', i)) {
-      const close = code.indexOf('>', i);
-      const end = close === -1 ? len : close + 1;
-      result += '<span class="hl-doctype">' + esc(code.slice(i, end)) + '</span>';
+    }
+    // Doctype / other <!
+    else if (code.substr(i, 2) === '<!' && code.substr(i, 4) !== '<!--') {
+      var close = code.indexOf('>', i);
+      var end = close === -1 ? len : close + 1;
+      result += '<span class="hl-doctype">' + esc(code.substring(i, end)) + '</span>';
       i = end;
-    } else if (code[i] === '<' && i + 1 < len && (code[i+1] === '/' || /[a-zA-Z]/.test(code[i+1]))) {
-      let j = i + 1;
-      if (code[j] === '/') j++;
-      while (j < len && /[a-zA-Z0-9\-]/.test(code[j])) j++;
-      let s = '<span class="hl-tag">' + esc(code.slice(i, j)) + '</span>';
-      while (j < len && code[j] !== '>') {
-        if (code[j] === '/' && j + 1 < len && code[j+1] === '>') {
-          s += '<span class="hl-tag">/&gt;</span>';
-          j += 2;
-          break;
-        }
-        if (/\s/.test(code[j])) { s += esc(code[j]); j++; continue; }
-        let a = j;
-        while (j < len && /[a-zA-Z0-9\-_:@.]/.test(code[j])) j++;
-        if (j === a) {
-          // Unknown char inside tag — emit it and move on to prevent infinite loop
-          s += esc(code[j]);
-          j++;
-          continue;
-        }
-        s += '<span class="hl-attr">' + esc(code.slice(a, j)) + '</span>';
-        if (j < len && code[j] === '=') {
-          s += '=';
-          j++;
-          if (j < len && (code[j] === '"' || code[j] === "'")) {
-            const q = code[j];
-            let v = code.indexOf(q, j + 1);
-            if (v === -1) v = len - 1;
-            s += '<span class="hl-str">' + esc(code.slice(j, v + 1)) + '</span>';
-            j = v + 1;
-          } else {
-            let v = j;
-            while (v < len && !/[\s>]/.test(code[v])) v++;
-            s += '<span class="hl-str">' + esc(code.slice(j, v)) + '</span>';
-            j = v;
-          }
-        }
-        if (j < len && code[j] === '>') {
-          s += '<span class="hl-tag">&gt;</span>';
-          j++;
-          break;
-        }
+    }
+    // Opening or closing tag
+    else if (code[i] === '<' && i + 1 < len && (code[i+1] === '/' || isAlpha(code[i+1]))) {
+      // Grab everything up to and including the next > (or end of string)
+      var tagEnd = code.indexOf('>', i);
+      var chunk;
+      if (tagEnd === -1) {
+        chunk = code.substring(i);
+        i = len;
+      } else {
+        chunk = code.substring(i, tagEnd + 1);
+        i = tagEnd + 1;
       }
-      if (j <= len && code[j - 1] !== '>' && j < len && code[j] === '>') {
-        s += '<span class="hl-tag">&gt;</span>';
-        j++;
-      }
-      result += s;
-      i = j;
-    } else if (code[i] === '&') {
-      const semi = code.indexOf(';', i);
+      result += highlightTag(chunk);
+    }
+    // Entity
+    else if (code[i] === '&') {
+      var semi = code.indexOf(';', i);
       if (semi !== -1 && semi - i < 12) {
-        result += '<span class="hl-entity">' + esc(code.slice(i, semi + 1)) + '</span>';
+        result += '<span class="hl-entity">' + esc(code.substring(i, semi + 1)) + '</span>';
         i = semi + 1;
       } else {
         result += esc(code[i]);
         i++;
       }
-    } else {
-      let j = i;
+    }
+    // Plain text
+    else {
+      var j = i;
       while (j < len && code[j] !== '<' && code[j] !== '&') j++;
-      result += '<span class="hl-text">' + esc(code.slice(i, j)) + '</span>';
+      if (j === i) j = i + 1; // safety
+      result += esc(code.substring(i, j));
       i = j;
     }
-    // Safety: guarantee forward progress
-    if (i === prevI) {
+
+    // Absolute safety: if nothing advanced, skip one char
+    if (i === before) {
       result += esc(code[i]);
       i++;
     }
@@ -377,154 +324,189 @@ function highlightHTML(code) {
   return result;
 }
 
+// Highlight a single complete tag string like '<div class="x">' or '<br/>'
+function highlightTag(tag) {
+  var r = '';
+  var i = 0;
+  var len = tag.length;
+
+  // < or </
+  var start = 1;
+  if (tag[1] === '/') start = 2;
+
+  // Tag name
+  var nameEnd = start;
+  while (nameEnd < len && /[a-zA-Z0-9\-]/.test(tag[nameEnd])) nameEnd++;
+  r += '<span class="hl-tag">' + esc(tag.substring(0, nameEnd)) + '</span>';
+  i = nameEnd;
+
+  // Attributes
+  while (i < len) {
+    // Closing > or />
+    if (tag[i] === '>') {
+      r += '<span class="hl-tag">&gt;</span>';
+      i++;
+      break;
+    }
+    if (tag[i] === '/' && i + 1 < len && tag[i+1] === '>') {
+      r += '<span class="hl-tag">/&gt;</span>';
+      i += 2;
+      break;
+    }
+    // Whitespace
+    if (/\s/.test(tag[i])) {
+      r += esc(tag[i]);
+      i++;
+      continue;
+    }
+    // Attribute name
+    var aStart = i;
+    while (i < len && /[a-zA-Z0-9\-_:@.]/.test(tag[i])) i++;
+    if (i > aStart) {
+      r += '<span class="hl-attr">' + esc(tag.substring(aStart, i)) + '</span>';
+    }
+    // = and value
+    if (i < len && tag[i] === '=') {
+      r += '=';
+      i++;
+      if (i < len && (tag[i] === '"' || tag[i] === "'")) {
+        var q = tag[i];
+        var vEnd = tag.indexOf(q, i + 1);
+        if (vEnd === -1) vEnd = len - 1;
+        r += '<span class="hl-str">' + esc(tag.substring(i, vEnd + 1)) + '</span>';
+        i = vEnd + 1;
+      } else if (i < len) {
+        var vEnd = i;
+        while (vEnd < len && !/[\s>]/.test(tag[vEnd])) vEnd++;
+        r += '<span class="hl-str">' + esc(tag.substring(i, vEnd)) + '</span>';
+        i = vEnd;
+      }
+    }
+    // Safety: if nothing advanced inside this iteration
+    if (i === aStart) {
+      r += esc(tag[i]);
+      i++;
+    }
+  }
+  // Any remaining chars (shouldn't happen but safety)
+  if (i < len) r += esc(tag.substring(i));
+  return r;
+}
+
 function esc(s) {
+  if (!s) return '';
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// ── Line Numbers ──
-function updateLineNumbers() {
-  const n = editor.value.split('\n').length;
-  let h = '';
-  for (let i = 1; i <= n; i++) h += '<span>' + i + '</span>';
-  lineNumbers.innerHTML = h;
+function isAlpha(ch) {
+  return ch && /[a-zA-Z]/.test(ch);
 }
-
-// ── Main update — debounced separately for highlight vs preview ──
-function update() {
-  updateLineNumbers();
-
-  // Debounce syntax highlighting (30ms — fast enough to feel instant)
-  clearTimeout(highlightTimer);
-  highlightTimer = setTimeout(() => {
-    highlightLayer.innerHTML = highlightHTML(editor.value) + '\n';
-    syncScroll();
-  }, 30);
-
-  // Debounce preview render (300ms — heavier operation)
-  clearTimeout(previewTimer);
-  previewTimer = setTimeout(() => {
-    const doc = preview.contentDocument;
-    doc.open();
-    doc.write(editor.value);
-    doc.close();
-  }, 300);
-}
-
-// ── Tab support ──
-editor.addEventListener('keydown', (e) => {
-  if (e.key === 'Tab') {
-    e.preventDefault();
-    const s = editor.selectionStart;
-    const end = editor.selectionEnd;
-    editor.value = editor.value.substring(0, s) + '  ' + editor.value.substring(end);
-    editor.selectionStart = editor.selectionEnd = s + 2;
-    update();
-  }
-});
-
-editor.addEventListener('input', update);
 
 // ── Format ──
 function formatCode() {
-  const raw = editor.value;
-  const tokens = [];
-  const re = /<!--[\s\S]*?-->|<!\w[^>]*>|<\/?\w[^>]*\/?>|[^<]+/g;
-  let m;
+  var raw = editor.value;
+  var tokens = [];
+  var re = /<!--[\s\S]*?-->|<!\w[^>]*>|<\/?\w[^>]*\/?>|[^<]+/g;
+  var m;
   while ((m = re.exec(raw)) !== null) tokens.push(m[0]);
 
-  const voidTags = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
-  const rawTags = new Set(['style','script','pre','code','textarea']);
+  var voidTags = { area:1, base:1, br:1, col:1, embed:1, hr:1, img:1, input:1, link:1, meta:1, param:1, source:1, track:1, wbr:1 };
+  var rawTags = { style:1, script:1, pre:1, code:1, textarea:1 };
 
-  let indent = 0, lines = [], inRaw = false, rawTag = '';
+  var indent = 0, lines = [], inRaw = false, rawTag = '';
 
-  for (const token of tokens) {
-    const trimmed = token.trim();
+  for (var t = 0; t < tokens.length; t++) {
+    var trimmed = tokens[t].trim();
     if (!trimmed) continue;
 
     if (inRaw) {
-      const closeRe = new RegExp('^</' + rawTag + '\\s*>', 'i');
+      var closeRe = new RegExp('^</' + rawTag + '\\s*>', 'i');
       if (closeRe.test(trimmed)) {
         inRaw = false;
         indent = Math.max(0, indent - 1);
-        lines.push('  '.repeat(indent) + trimmed);
+        lines.push(ind(indent) + trimmed);
       } else {
-        const rawLines = trimmed.split('\n');
-        for (const rl of rawLines) {
-          lines.push('  '.repeat(indent) + rl.trimStart());
+        var rl = trimmed.split('\n');
+        for (var r = 0; r < rl.length; r++) {
+          var line = rl[r].replace(/^\s+/, '');
+          if (line) lines.push(ind(indent) + line);
         }
       }
       continue;
     }
 
-    const isComment = trimmed.startsWith('<!--');
-    const isDoctype = /^<!/i.test(trimmed) && !isComment;
-    const isClosing = /^<\//.test(trimmed);
-    const tagMatch = trimmed.match(/^<\/?([a-zA-Z][a-zA-Z0-9]*)/);
-    const tagName = tagMatch ? tagMatch[1].toLowerCase() : '';
-    const isVoid = voidTags.has(tagName);
-    const isSelfClose = trimmed.endsWith('/>');
-    const isOpening = /^<[a-zA-Z]/.test(trimmed) && !isClosing;
+    var isComment = trimmed.substr(0, 4) === '<!--';
+    var isDoctype = /^<!/i.test(trimmed) && !isComment;
+    var isClosing = /^<\//.test(trimmed);
+    var tagMatch = trimmed.match(/^<\/?([a-zA-Z][a-zA-Z0-9]*)/);
+    var tagName = tagMatch ? tagMatch[1].toLowerCase() : '';
+    var isVoid = voidTags[tagName];
+    var isSelfClose = trimmed.charAt(trimmed.length - 2) === '/' && trimmed.charAt(trimmed.length - 1) === '>';
+    var isOpening = /^<[a-zA-Z]/.test(trimmed) && !isClosing;
 
     if (isClosing) {
       indent = Math.max(0, indent - 1);
-      lines.push('  '.repeat(indent) + trimmed);
+      lines.push(ind(indent) + trimmed);
     } else if (isComment || isDoctype) {
-      lines.push('  '.repeat(indent) + trimmed);
+      lines.push(ind(indent) + trimmed);
     } else if (isOpening) {
-      lines.push('  '.repeat(indent) + trimmed);
+      lines.push(ind(indent) + trimmed);
       if (!isVoid && !isSelfClose) {
-        if (rawTags.has(tagName)) { inRaw = true; rawTag = tagName; }
+        if (rawTags[tagName]) { inRaw = true; rawTag = tagName; }
         indent++;
       }
     } else {
-      const textLines = trimmed.split('\n');
-      for (const tl of textLines) {
-        const t = tl.trim();
-        if (t) lines.push('  '.repeat(indent) + t);
+      var tl = trimmed.split('\n');
+      for (var x = 0; x < tl.length; x++) {
+        var ln = tl[x].replace(/^\s+/, '');
+        if (ln) lines.push(ind(indent) + ln);
       }
     }
   }
 
   editor.value = lines.join('\n');
-  update();
+  old = ''; // force poll to pick up change
+}
+
+function ind(n) {
+  var s = '';
+  for (var i = 0; i < n; i++) s += '  ';
+  return s;
 }
 
 // ── Resizable divider ──
-const divider = document.getElementById('divider');
-const editorPane = document.getElementById('editorPane');
-const previewPane = document.getElementById('previewPane');
-let isDragging = false;
+var divider = document.getElementById('divider');
+var editorPane = document.getElementById('editorPane');
+var previewPane = document.getElementById('previewPane');
+var isDragging = false;
 
-divider.addEventListener('mousedown', () => {
+divider.addEventListener('mousedown', function() {
   isDragging = true;
   divider.classList.add('dragging');
   document.body.style.cursor = 'col-resize';
   document.body.style.userSelect = 'none';
-  preview.style.pointerEvents = 'none';
+  previewFrame.style.pointerEvents = 'none';
 });
-
-document.addEventListener('mousemove', (e) => {
+document.addEventListener('mousemove', function(e) {
   if (!isDragging) return;
-  const rect = document.querySelector('.workspace').getBoundingClientRect();
-  const pct = Math.max(20, Math.min(80, ((e.clientX - rect.left) / rect.width) * 100));
+  var rect = document.querySelector('.workspace').getBoundingClientRect();
+  var pct = Math.max(20, Math.min(80, ((e.clientX - rect.left) / rect.width) * 100));
   editorPane.style.flex = 'none';
   editorPane.style.width = pct + '%';
   previewPane.style.flex = '1';
 });
-
-document.addEventListener('mouseup', () => {
+document.addEventListener('mouseup', function() {
   if (isDragging) {
     isDragging = false;
     divider.classList.remove('dragging');
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
-    preview.style.pointerEvents = '';
+    previewFrame.style.pointerEvents = '';
   }
 });
 
-// ── Init ──
-editor.value = sampleHTML;
-update();
+// ── Start ──
+poll();
 </script>
 </body>
 </html>
